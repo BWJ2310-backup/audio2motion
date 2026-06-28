@@ -96,9 +96,10 @@ Remote audio2motion hosting:
 - In `[audio_sender]`, set `server_host` to the GPU machine IP or DNS name.
 - In `[[motion_receivers]]`, set `host` to the machine running each streamer as
   reachable from the GPU machine.
-- In `[stream2vmc]`, set `target_host` to the InZOI VMC receiver machine.
-- In `[stream2livelink]`, set `target_host` to the InZOI LiveLink receiver
-  machine.
+- In `[stream2vmc]`, set `target_host` and `target_port` for the final VMC UDP
+  receiver.
+- In `[stream2livelink]`, set `target_host` and `target_port` for the final
+  LiveLink UDP receiver.
 
 If the machines are not on the same LAN, use a VPN/tunnel such as Tailscale,
 WireGuard, or ZeroTier. Do not rely on public open ports unless you also add

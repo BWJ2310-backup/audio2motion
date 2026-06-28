@@ -424,7 +424,10 @@ class EchoChunk:
 def recv_exact(sock: socket.socket, size: int) -> bytes | None:
     data = bytearray()
     while len(data) < size:
-        chunk = sock.recv(size - len(data))
+        try:
+            chunk = sock.recv(size - len(data))
+        except socket.timeout:
+            continue
         if not chunk:
             return None
         data.extend(chunk)

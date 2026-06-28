@@ -79,13 +79,18 @@ def main() -> int:
             server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             server.bind((listen_host, listen_port))
             server.listen(1)
+            server.settimeout(0.5)
             print(f"[vmc] listening for EchoAvatar body stream on {listen_host}:{listen_port}")
             print(f"[vmc] output body VMC -> {sender.target[0]}:{sender.target[1]}")
 
             while running:
-                client, address = server.accept()
+                try:
+                    client, address = server.accept()
+                except socket.timeout:
+                    continue
                 print(f"[vmc] EchoAvatar connected from {address[0]}:{address[1]}")
                 with client:
+                    client.settimeout(0.5)
                     while running:
                         chunk = read_echo_chunk(client, max_packet_bytes)
                         if chunk is None:
