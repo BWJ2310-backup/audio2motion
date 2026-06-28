@@ -116,9 +116,11 @@ python stream2vmc.py
 This service only reads `pose` and `trans` from the EchoAvatar packet and only
 sends VMC body bone messages. It does not send ARKit face data.
 
-For direct InZOI body streaming, use `coordinate_mode = "unity_to_unreal"` in
-`config/echoavatar.toml`. `coordinate_mode = "blender_to_vmc"` is still
-available for sources that are actually in Blender coordinates.
+For direct InZOI body streaming, use `coordinate_mode = "echoavatar_to_vmc"` in
+`config/echoavatar.toml`. EchoAvatar already swaps root translation to Y-up on
+the model host, so the stream receiver only flips root X for VMC position and
+uses the same final quaternion component mapping as the working Blender/UPBGE
+scripts: `(x, -z, y, w)`.
 
 ### 3. Start Facial LiveLink Streamer
 

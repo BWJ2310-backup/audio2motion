@@ -38,16 +38,16 @@ listen_port = 12346
 # 127.0.0.1 is correct.
 target_host = "192.168.0.131"
 target_port = 39539
-source_fps = 60
+source_fps = 30
 body_fps = 30
 stream_fps = 30
 root_offset = [0.0, 0.0, 0.0]
 root_position_mode = "relative_horizontal"
-root_rotation_mode = "root_bone"
-hips_rotation_mode = "identity"
-# EchoAvatar body rotations are Unity-oriented; InZOI consumes Unreal-oriented
-# body transforms.
-coordinate_mode = "unity_to_unreal"
+root_rotation_mode = "identity"
+hips_rotation_mode = "root_bone"
+# EchoAvatar already swaps root translation to Y-up; this only flips X for VMC
+# position and uses the working Blender/UPBGE VMC quaternion component mapping.
+coordinate_mode = "echoavatar_to_vmc"
 max_packet_bytes = 104857600
 no_pacing = false
 dry_run = false
@@ -62,7 +62,7 @@ listen_port = 12348
 target_host = "192.168.0.131"
 target_port = 11111
 subject = "Python_LiveLinkFace"
-source_fps = 60
+source_fps = 30
 face_fps = 30
 stream_fps = 30
 silence_neutral_face = true
