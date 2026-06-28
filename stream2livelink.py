@@ -71,10 +71,6 @@ def main() -> int:
         dry_run=get_bool(cfg, "dry_run", False),
         fps=face_fps,
         subject=get_str(cfg, "subject", "Python_LiveLinkFace"),
-        eye_rotation_mode=get_str(cfg, "eye_rotation_mode", "blendshape"),
-        eye_look_scale=get_float(cfg, "eye_look_scale", 1.0),
-        eye_yaw_scale=get_float(cfg, "eye_yaw_scale", 1.0),
-        eye_pitch_scale=get_float(cfg, "eye_pitch_scale", 1.0),
         debug=get_bool(cfg, "debug", False),
     )
     max_packet_bytes = get_int(cfg, "max_packet_bytes", 100 * 1024 * 1024)
@@ -129,11 +125,10 @@ def main() -> int:
                             print(f"[livelink] audio_rms={rms:.6f} active={audio_active}")
 
                         for index in frame_indices(frame_count, frame_stride):
-                            pose_frame = chunk.pose[index] if index < len(chunk.pose) else None
                             values52 = chunk.blendshape[index]
                             if silence_neutral_face and not audio_active:
                                 values52 = []
-                            sender.send_blendshapes(values52, pose_frame)
+                            sender.send_blendshapes(values52)
                             if frame_interval > 0.0:
                                 time.sleep(frame_interval)
 

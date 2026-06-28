@@ -124,9 +124,8 @@ Start the face-only LiveLink service before `audio2motion.py`:
 python stream2livelink.py
 ```
 
-This service only sends facial ARKit coefficients over LiveLink. Eye rotation
-output is controlled by `stream2livelink.eye_rotation_mode`,
-`eye_yaw_scale`, and `eye_pitch_scale` in the TOML config.
+This service sends EchoAvatar's raw 52 ARKit facial coefficients over LiveLink.
+The extra LiveLink head/eye rotation slots are left neutral.
 
 ### 4. Start Audio2Motion
 

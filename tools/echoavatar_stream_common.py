@@ -93,37 +93,6 @@ VMC_TO_ECHO_BONE = {
 }
 
 
-LIVELINK_HEAD_YAW = 52
-LIVELINK_HEAD_PITCH = 53
-LIVELINK_HEAD_ROLL = 54
-LIVELINK_LEFT_EYE_YAW = 55
-LIVELINK_LEFT_EYE_PITCH = 56
-LIVELINK_LEFT_EYE_ROLL = 57
-LIVELINK_RIGHT_EYE_YAW = 58
-LIVELINK_RIGHT_EYE_PITCH = 59
-LIVELINK_RIGHT_EYE_ROLL = 60
-
-ARKIT_EYE_LOOK_DOWN_LEFT = 1
-ARKIT_EYE_LOOK_IN_LEFT = 2
-ARKIT_EYE_LOOK_OUT_LEFT = 3
-ARKIT_EYE_LOOK_UP_LEFT = 4
-ARKIT_EYE_LOOK_DOWN_RIGHT = 8
-ARKIT_EYE_LOOK_IN_RIGHT = 9
-ARKIT_EYE_LOOK_OUT_RIGHT = 10
-ARKIT_EYE_LOOK_UP_RIGHT = 11
-
-ARKIT_EYE_LOOK_INDICES = (
-    ARKIT_EYE_LOOK_DOWN_LEFT,
-    ARKIT_EYE_LOOK_IN_LEFT,
-    ARKIT_EYE_LOOK_OUT_LEFT,
-    ARKIT_EYE_LOOK_UP_LEFT,
-    ARKIT_EYE_LOOK_DOWN_RIGHT,
-    ARKIT_EYE_LOOK_IN_RIGHT,
-    ARKIT_EYE_LOOK_OUT_RIGHT,
-    ARKIT_EYE_LOOK_UP_RIGHT,
-)
-
-
 class StopStream(Exception):
     pass
 
@@ -140,25 +109,6 @@ def normalize_xyzw(quat: Sequence[float]) -> tuple[float, float, float, float]:
     if norm <= 1e-8:
         return 0.0, 0.0, 0.0, 1.0
     return x / norm, y / norm, z / norm, w / norm
-
-
-def quat_xyzw_to_euler_xyz(quat: Sequence[float]) -> tuple[float, float, float]:
-    x, y, z, w = normalize_xyzw(quat)
-
-    sinr_cosp = 2.0 * (w * x + y * z)
-    cosr_cosp = 1.0 - 2.0 * (x * x + y * y)
-    roll_x = math.atan2(sinr_cosp, cosr_cosp)
-
-    sinp = 2.0 * (w * y - z * x)
-    if abs(sinp) >= 1.0:
-        pitch_y = math.copysign(math.pi / 2.0, sinp)
-    else:
-        pitch_y = math.asin(sinp)
-
-    siny_cosp = 2.0 * (w * z + x * y)
-    cosy_cosp = 1.0 - 2.0 * (y * y + z * z)
-    yaw_z = math.atan2(siny_cosp, cosy_cosp)
-    return roll_x, pitch_y, yaw_z
 
 
 def build_osc_message(address: str, *args: object) -> bytes:
@@ -339,18 +289,10 @@ class LiveLinkFaceSender:
         dry_run: bool,
         fps: int,
         subject: str,
-        eye_rotation_mode: str,
-        eye_look_scale: float,
-        eye_yaw_scale: float,
-        eye_pitch_scale: float,
         debug: bool,
     ) -> None:
         self.dry_run = dry_run
         self.debug = debug
-        self.eye_rotation_mode = eye_rotation_mode
-        self.eye_look_scale = eye_look_scale
-        self.eye_yaw_scale = eye_yaw_scale
-        self.eye_pitch_scale = eye_pitch_scale
         self.packet = LiveLinkFacePacket(subject, fps)
         self.target = (host, port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -365,26 +307,17 @@ class LiveLinkFaceSender:
     def send_blendshapes(
         self,
         values52: Sequence[float],
-        pose_frame: Sequence[Sequence[float]] | None,
     ) -> None:
         values = [0.0] * 61
         for index, value in enumerate(values52[:52]):
-            values[index] = clamp(value, 0.0, 1.0)
-        self._scale_eye_look_blendshapes(values)
-        self._apply_eye_rotations(values, pose_frame)
+            values[index] = float(value)
         self.packet.values = values
         self._send_packet()
         self.sent_frames += 1
 
         if self.debug and self.sent_frames % 60 == 0:
             active = sum(1 for value in values if abs(value) > 0.01)
-            print(
-                f"[livelink] frame={self.sent_frames} active_curves={active} "
-                f"left_eye=({values[LIVELINK_LEFT_EYE_YAW]:.3f},"
-                f"{values[LIVELINK_LEFT_EYE_PITCH]:.3f}) "
-                f"right_eye=({values[LIVELINK_RIGHT_EYE_YAW]:.3f},"
-                f"{values[LIVELINK_RIGHT_EYE_PITCH]:.3f})"
-            )
+            print(f"[livelink] frame={self.sent_frames} active_curves={active}")
 
     def _send_packet(self) -> None:
         packet = self.packet.encode()
@@ -394,72 +327,6 @@ class LiveLinkFaceSender:
             except OSError as exc:
                 if self.debug:
                     print(f"[livelink] send failed: {exc}")
-
-    def _scale_eye_look_blendshapes(self, values61: list[float]) -> None:
-        if self.eye_look_scale == 1.0:
-            return
-        for index in ARKIT_EYE_LOOK_INDICES:
-            values61[index] = clamp(values61[index] * self.eye_look_scale, 0.0, 1.0)
-
-    def _apply_eye_rotations(
-        self,
-        values61: list[float],
-        pose_frame: Sequence[Sequence[float]] | None,
-    ) -> None:
-        if self.eye_rotation_mode == "off":
-            return
-
-        if self.eye_rotation_mode == "pose" and pose_frame:
-            left = self._eye_rotation_from_pose(pose_frame, "Eye_L")
-            right = self._eye_rotation_from_pose(pose_frame, "Eye_R")
-            if left and right:
-                values61[LIVELINK_LEFT_EYE_YAW] = left[0]
-                values61[LIVELINK_LEFT_EYE_PITCH] = left[1]
-                values61[LIVELINK_LEFT_EYE_ROLL] = left[2]
-                values61[LIVELINK_RIGHT_EYE_YAW] = right[0]
-                values61[LIVELINK_RIGHT_EYE_PITCH] = right[1]
-                values61[LIVELINK_RIGHT_EYE_ROLL] = right[2]
-                return
-
-        values61[LIVELINK_LEFT_EYE_YAW] = clamp(
-            (values61[ARKIT_EYE_LOOK_OUT_LEFT] - values61[ARKIT_EYE_LOOK_IN_LEFT])
-            * self.eye_yaw_scale,
-            -1.0,
-            1.0,
-        )
-        values61[LIVELINK_LEFT_EYE_PITCH] = clamp(
-            (values61[ARKIT_EYE_LOOK_DOWN_LEFT] - values61[ARKIT_EYE_LOOK_UP_LEFT])
-            * self.eye_pitch_scale,
-            -1.0,
-            1.0,
-        )
-        values61[LIVELINK_RIGHT_EYE_YAW] = clamp(
-            (values61[ARKIT_EYE_LOOK_IN_RIGHT] - values61[ARKIT_EYE_LOOK_OUT_RIGHT])
-            * self.eye_yaw_scale,
-            -1.0,
-            1.0,
-        )
-        values61[LIVELINK_RIGHT_EYE_PITCH] = clamp(
-            (values61[ARKIT_EYE_LOOK_DOWN_RIGHT] - values61[ARKIT_EYE_LOOK_UP_RIGHT])
-            * self.eye_pitch_scale,
-            -1.0,
-            1.0,
-        )
-
-    def _eye_rotation_from_pose(
-        self,
-        pose_frame: Sequence[Sequence[float]],
-        echo_name: str,
-    ) -> tuple[float, float, float] | None:
-        index = BONE_INDEX.get(echo_name)
-        if index is None or index >= len(pose_frame):
-            return None
-        pitch_x, _unused_y, yaw_z = quat_xyzw_to_euler_xyz(pose_frame[index])
-        return (
-            clamp(yaw_z * self.eye_yaw_scale, -1.0, 1.0),
-            clamp(pitch_x * self.eye_pitch_scale, -1.0, 1.0),
-            0.0,
-        )
 
 
 @dataclass
