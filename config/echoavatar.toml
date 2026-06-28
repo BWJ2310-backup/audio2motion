@@ -61,7 +61,7 @@ listen_port = 12348
 # InZOI, 127.0.0.1 is correct.
 target_host = "192.168.0.131"
 target_port = 11111
-subject = "Python_LiveLinkFace"
+subject = "Audio2Face"
 source_fps = 30
 face_fps = 30
 stream_fps = 30

@@ -70,7 +70,7 @@ def main() -> int:
         get_int(cfg, "target_port", 11111),
         dry_run=get_bool(cfg, "dry_run", False),
         fps=face_fps,
-        subject=get_str(cfg, "subject", "Python_LiveLinkFace"),
+        subject=get_str(cfg, "subject", "Audio2Face"),
         debug=get_bool(cfg, "debug", False),
     )
     max_packet_bytes = get_int(cfg, "max_packet_bytes", 100 * 1024 * 1024)
