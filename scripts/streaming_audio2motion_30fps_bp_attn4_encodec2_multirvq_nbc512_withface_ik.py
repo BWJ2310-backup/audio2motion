@@ -548,8 +548,7 @@ class StreamingFaceInfer:
         # Denormalize
         motion_coef = motion_token * self.arkit_std + self.arkit_mean
 
-        motion_coef = convert_52_to_47_fast(motion_coef.detach().cpu().numpy())
-        return motion_coef
+        return motion_coef.detach().cpu().numpy()
 
 
 class BlendshapeSmoother:
@@ -1256,99 +1255,6 @@ class ParallelMotionDecoders:
         return out_lower.clone(), out_upper.clone(), out_hands.clone()
 
 
-
-def convert_52_to_47_fast(arkit_frames):
-    """
-    Input: (Batch, 52) matrix, in the exact order of the provided CURRENT_ORDER
-    Output: (Batch, 48) matrix, corresponding to FU indices 0 to 47
-    """
-    src = np.array(arkit_frames)
-    if src.ndim == 1:
-        src = src[None, :] # Handle the single-frame case
-
-    # -----------------------------------------------------------
-    # 1. Simple mapping group (precomputed indices)
-    # Corresponding FU indices: [1...35] (35 total)
-    # -----------------------------------------------------------
-    idx_part1 = [
-        0, 7,   # 1,2   EyeBlink L/R
-        5, 12,  # 3,4   EyeSquint L/R
-        1, 8,   # 5,6   EyeDown L/R
-        2, 9,   # 7,8   EyeIn L/R
-        6, 13,  # 9,10  EyeOpen L/R (Wide)
-        3, 10,  # 11,12 EyeOut L/R
-        4, 11,  # 13,14 EyeUp L/R
-        41, 42, # 15,16 BrowsD L/R
-        43,     # 17    BrowsU C
-        44, 45, # 18,19 BrowsU L/R
-        14,     # 20    JawFwd
-        15,     # 21    JawLeft
-        17,     # 22    JawOpen (Note: original list index 17 is jawOpen)
-        16,     # 23    JawRight
-        21, 22, # 24,25 MouthLeft/Right
-        25, 26, # 26,27 MouthFrown L/R
-        23, 24, # 28,29 MouthSmile L/R
-        27, 28, # 30,31 MouthDimple L/R
-        29, 30, # 32,33 MouthStretch L/R
-        32, 31  # 34,35 LipsUpperClose/LowerClose (Roll)
-    ]
-
-    # -----------------------------------------------------------
-    # 2. Simple Mapping Group Part 2
-    # Corresponding FU indices: [38, 39, 40, 41] (4 total)
-    # -----------------------------------------------------------
-    idx_part2 = [
-        34,     # 38 MouthUp (ShrugUpper)
-        19,     # 39 LipsFunnel
-        20,     # 40 LipsPucker
-        33      # 41 ChinLowerRaise (ShrugLower)
-    ]
-
-    # -----------------------------------------------------------
-    # 3. Simple Mapping Group Part 3
-    # Corresponding FU indices: [44, 45, 46, 47] (4 total)
-    # -----------------------------------------------------------
-    idx_part3 = [
-        46,     # 44 Puff
-        47, 48, # 45,46 CheekSquint L/R
-        18      # 47 MouthOpenClose (Close)
-    ]
-
-    # -----------------------------------------------------------
-    # Run extraction
-    # -----------------------------------------------------------
-    
-    # Extract all simple-mapping columns
-    p1 = src[:, idx_part1]
-    p2 = src[:, idx_part2]
-    p3 = src[:, idx_part3]
-
-    # Compute merged columns (take max of left/right)
-    # 36: LipsUpperUp (UpperUp L/R: 39, 40)
-    c36 = np.maximum(src[:, 39], src[:, 40])[:, None]
-    
-    # 37: LipsLowerDown (LowerDown L/R: 37, 38)
-    c37 = np.maximum(src[:, 37], src[:, 38])[:, None]
-    
-    # 42: ChinUpperRaise (Press L/R: 35, 36)
-    c42 = np.maximum(src[:, 35], src[:, 36])[:, None]
-    
-    # 43: Sneer (Sneer L/R: 49, 50)
-    c43 = np.maximum(src[:, 49], src[:, 50])[:, None]
-
-
-    # -----------------------------------------------------------
-    # Concatenate output (strictly in 0-47 order)
-    # -----------------------------------------------------------
-    return np.hstack([
-        p1,   # 1-35
-        c36,  # 36
-        c37,  # 37
-        p2,   # 38-41
-        c42,  # 42
-        c43,  # 43
-        p3    # 44-47
-    ])
 
 def parse_args():
     parser = argparse.ArgumentParser(

@@ -56,6 +56,7 @@ def main() -> int:
         root_scale=get_float(cfg, "root_scale", 1.0),
         root_offset=get_float_tuple(cfg, "root_offset", (0.0, 0.0, 0.0)),
         root_rotation_mode=get_str(cfg, "root_rotation_mode", "identity"),
+        coordinate_mode=get_str(cfg, "coordinate_mode", "identity"),
         debug=get_bool(cfg, "debug", False),
     )
     max_packet_bytes = get_int(cfg, "max_packet_bytes", 100 * 1024 * 1024)
@@ -82,6 +83,7 @@ def main() -> int:
             server.settimeout(0.5)
             print(f"[vmc] listening for EchoAvatar body stream on {listen_host}:{listen_port}")
             print(f"[vmc] output body VMC -> {sender.target[0]}:{sender.target[1]}")
+            print(f"[vmc] coordinate mode: {sender.coordinate_mode}")
 
             while running:
                 try:
@@ -116,6 +118,8 @@ def main() -> int:
 
     except StopStream as exc:
         print(f"[vmc] stopping: {exc}")
+    except KeyboardInterrupt:
+        print("[vmc] stopping: keyboard interrupt")
     finally:
         sender.close()
 

@@ -36,7 +36,7 @@ listen_host = "0.0.0.0"
 listen_port = 12346
 # Final VMC UDP target. If stream2vmc.py runs on the same machine as InZOI,
 # 127.0.0.1 is correct.
-target_host = "127.0.0.1"
+target_host = "192.168.0.131"
 target_port = 39539
 source_fps = 60
 body_fps = 60
@@ -44,6 +44,7 @@ stream_fps = 60
 root_scale = 1.0
 root_offset = [0.0, 0.0, 0.0]
 root_rotation_mode = "identity"
+coordinate_mode = "blender_to_vmc"
 max_packet_bytes = 104857600
 no_pacing = false
 dry_run = false
@@ -55,7 +56,7 @@ listen_host = "0.0.0.0"
 listen_port = 12348
 # Final LiveLink UDP target. If stream2livelink.py runs on the same machine as
 # InZOI, 127.0.0.1 is correct.
-target_host = "127.0.0.1"
+target_host = "192.168.0.131"
 target_port = 11111
 subject = "Python_LiveLinkFace"
 source_fps = 60

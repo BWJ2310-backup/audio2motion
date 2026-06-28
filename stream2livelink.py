@@ -117,6 +117,8 @@ def main() -> int:
 
     except StopStream as exc:
         print(f"[livelink] stopping: {exc}")
+    except KeyboardInterrupt:
+        print("[livelink] stopping: keyboard interrupt")
     finally:
         sender.close()
 

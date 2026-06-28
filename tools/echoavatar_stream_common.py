@@ -185,12 +185,14 @@ class VmcSender:
         root_scale: float,
         root_offset: tuple[float, float, float],
         root_rotation_mode: str,
+        coordinate_mode: str,
         debug: bool,
     ) -> None:
         self.dry_run = dry_run
         self.root_scale = root_scale
         self.root_offset = root_offset
         self.root_rotation_mode = root_rotation_mode
+        self.coordinate_mode = coordinate_mode
         self.debug = debug
         self.target = (host, port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -217,10 +219,17 @@ class VmcSender:
         root_x = float(trans_frame[0]) if len(trans_frame) > 0 else 0.0
         root_y = float(trans_frame[1]) if len(trans_frame) > 1 else 0.0
         root_z = float(trans_frame[2]) if len(trans_frame) > 2 else 0.0
+        root_pos = self._convert_position(
+            (
+                root_x * self.root_scale,
+                root_y * self.root_scale,
+                root_z * self.root_scale,
+            )
+        )
         root_pos = (
-            root_x * self.root_scale + self.root_offset[0],
-            root_y * self.root_scale + self.root_offset[1],
-            root_z * self.root_scale + self.root_offset[2],
+            root_pos[0] + self.root_offset[0],
+            root_pos[1] + self.root_offset[1],
+            root_pos[2] + self.root_offset[2],
         )
 
         root_quat = (
@@ -252,7 +261,25 @@ class VmcSender:
         index = BONE_INDEX.get(echo_name)
         if index is None or index >= len(pose_frame):
             return 0.0, 0.0, 0.0, 1.0
-        return normalize_xyzw(pose_frame[index])
+        return self._convert_quat(normalize_xyzw(pose_frame[index]))
+
+    def _convert_position(
+        self,
+        pos: tuple[float, float, float],
+    ) -> tuple[float, float, float]:
+        x, y, z = pos
+        if self.coordinate_mode == "blender_to_vmc":
+            return -x, z, -y
+        return x, y, z
+
+    def _convert_quat(
+        self,
+        quat: tuple[float, float, float, float],
+    ) -> tuple[float, float, float, float]:
+        x, y, z, w = quat
+        if self.coordinate_mode == "blender_to_vmc":
+            return normalize_xyzw((x, -z, y, w))
+        return quat
 
 
 class LiveLinkFacePacket:
