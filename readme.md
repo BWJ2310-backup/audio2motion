@@ -118,9 +118,9 @@ sends VMC body bone messages. It does not send ARKit face data.
 
 For direct InZOI body streaming, use `coordinate_mode = "echoavatar_to_vmc"` in
 `config/echoavatar.toml`. EchoAvatar already swaps root translation to Y-up on
-the model host, so the stream receiver only flips root X for VMC position and
-uses the same final quaternion component mapping as the working Blender/UPBGE
-scripts: `(x, -z, y, w)`.
+the model host, and its vertical channel is pelvis height in centimeters. The
+stream receiver grounds `/VMC/Ext/Root/Pos` and uses the same final quaternion
+component mapping as the working Blender/UPBGE scripts: `(x, -z, y, w)`.
 
 ### 3. Start Facial LiveLink Streamer
 

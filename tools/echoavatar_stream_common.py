@@ -261,6 +261,8 @@ class VmcSender:
         if self.root_position_mode == "relative":
             return x - ax, y - ay, z - az
         if self.root_position_mode == "relative_horizontal":
+            if self.coordinate_mode == "echoavatar_to_vmc":
+                return x - ax, 0.0, z - az
             if self.coordinate_mode == "unity_to_unreal":
                 return x - ax, y - ay, z
             return x - ax, y, z - az

@@ -42,6 +42,7 @@ source_fps = 30
 body_fps = 30
 stream_fps = 30
 root_offset = [0.0, 0.0, 0.0]
+# Ground the actor root; EchoAvatar trans carries pelvis height in centimeters.
 root_position_mode = "relative_horizontal"
 root_rotation_mode = "identity"
 hips_rotation_mode = "root_bone"
