@@ -76,9 +76,11 @@ def main() -> int:
     try:
         import sounddevice as sd
     except ModuleNotFoundError as exc:
+        if exc.name != "sounddevice":
+            raise
         raise SystemExit(
             "Missing dependency: sounddevice. Install it on the audio-capture "
-            "machine with `pip install sounddevice keyboard`."
+            "machine with `py -m pip install -r requirements-client.txt`."
         ) from exc
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
