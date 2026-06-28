@@ -80,7 +80,9 @@ def main() -> int:
             raise
         raise SystemExit(
             "Missing dependency: sounddevice. Install it on the audio-capture "
-            "machine with `py -m pip install -r requirements-client.txt`."
+            "machine with `py -m pip install -r requirements-client.txt`.\n"
+            f"Python executable: {sys.executable}\n"
+            f"Python path: {sys.path}"
         ) from exc
 
     client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
