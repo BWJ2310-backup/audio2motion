@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import math
 import os
 import signal
 import socket
@@ -26,6 +27,18 @@ from tools.echoavatar_stream_common import (
 )
 
 
+def audio_rms(samples: list[float]) -> float:
+    if not samples:
+        return 0.0
+    total = 0.0
+    count = 0
+    for sample in samples:
+        value = float(sample)
+        total += value * value
+        count += 1
+    return math.sqrt(total / count) if count else 0.0
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Stream EchoAvatar ARKit face coefficients to LiveLink."
@@ -46,6 +59,9 @@ def main() -> int:
     source_fps = get_int(cfg, "source_fps", 60)
     face_fps = get_int(cfg, "face_fps", 60)
     stream_fps = get_int(cfg, "stream_fps", 60)
+    silence_neutral_face = get_bool(cfg, "silence_neutral_face", True)
+    audio_gate_threshold = get_float(cfg, "audio_gate_threshold", 0.001)
+    debug_audio_level = get_bool(cfg, "debug_audio_level", False)
     frame_stride = max(1, round(source_fps / face_fps)) if face_fps > 0 else 1
     frame_interval = 0.0 if get_bool(cfg, "no_pacing", False) else 1.0 / float(stream_fps)
 
@@ -56,6 +72,7 @@ def main() -> int:
         fps=face_fps,
         subject=get_str(cfg, "subject", "Python_LiveLinkFace"),
         eye_rotation_mode=get_str(cfg, "eye_rotation_mode", "blendshape"),
+        eye_look_scale=get_float(cfg, "eye_look_scale", 1.0),
         eye_yaw_scale=get_float(cfg, "eye_yaw_scale", 1.0),
         eye_pitch_scale=get_float(cfg, "eye_pitch_scale", 1.0),
         debug=get_bool(cfg, "debug", False),
@@ -83,6 +100,10 @@ def main() -> int:
             server.settimeout(0.5)
             print(f"[livelink] listening for EchoAvatar face stream on {listen_host}:{listen_port}")
             print(f"[livelink] output face LiveLink -> {sender.target[0]}:{sender.target[1]}")
+            print(
+                f"[livelink] silence neutral: {silence_neutral_face} "
+                f"threshold={audio_gate_threshold}"
+            )
 
             while running:
                 try:
@@ -102,10 +123,17 @@ def main() -> int:
                         frame_count = len(chunk.blendshape)
                         if frame_count <= 0:
                             continue
+                        rms = audio_rms(chunk.audio)
+                        audio_active = rms >= audio_gate_threshold
+                        if debug_audio_level:
+                            print(f"[livelink] audio_rms={rms:.6f} active={audio_active}")
 
                         for index in frame_indices(frame_count, frame_stride):
                             pose_frame = chunk.pose[index] if index < len(chunk.pose) else None
-                            sender.send_blendshapes(chunk.blendshape[index], pose_frame)
+                            values52 = chunk.blendshape[index]
+                            if silence_neutral_face and not audio_active:
+                                values52 = []
+                            sender.send_blendshapes(values52, pose_frame)
                             if frame_interval > 0.0:
                                 time.sleep(frame_interval)
 

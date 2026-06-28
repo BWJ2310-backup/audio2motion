@@ -112,6 +112,17 @@ ARKIT_EYE_LOOK_IN_RIGHT = 9
 ARKIT_EYE_LOOK_OUT_RIGHT = 10
 ARKIT_EYE_LOOK_UP_RIGHT = 11
 
+ARKIT_EYE_LOOK_INDICES = (
+    ARKIT_EYE_LOOK_DOWN_LEFT,
+    ARKIT_EYE_LOOK_IN_LEFT,
+    ARKIT_EYE_LOOK_OUT_LEFT,
+    ARKIT_EYE_LOOK_UP_LEFT,
+    ARKIT_EYE_LOOK_DOWN_RIGHT,
+    ARKIT_EYE_LOOK_IN_RIGHT,
+    ARKIT_EYE_LOOK_OUT_RIGHT,
+    ARKIT_EYE_LOOK_UP_RIGHT,
+)
+
 
 class StopStream(Exception):
     pass
@@ -185,6 +196,7 @@ class VmcSender:
         root_scale: float,
         root_offset: tuple[float, float, float],
         root_rotation_mode: str,
+        hips_rotation_mode: str,
         coordinate_mode: str,
         debug: bool,
     ) -> None:
@@ -192,6 +204,7 @@ class VmcSender:
         self.root_scale = root_scale
         self.root_offset = root_offset
         self.root_rotation_mode = root_rotation_mode
+        self.hips_rotation_mode = hips_rotation_mode
         self.coordinate_mode = coordinate_mode
         self.debug = debug
         self.target = (host, port)
@@ -240,7 +253,12 @@ class VmcSender:
         self.send("/VMC/Ext/Root/Pos", "root", *root_pos, *root_quat)
 
         for vmc_name, echo_name in VMC_TO_ECHO_BONE.items():
-            quat = self._bone_quat(pose_frame, echo_name)
+            if vmc_name == "Hips" and self.hips_rotation_mode == "identity":
+                quat = (0.0, 0.0, 0.0, 1.0)
+            elif vmc_name == "Hips" and self.hips_rotation_mode == "skip":
+                continue
+            else:
+                quat = self._bone_quat(pose_frame, echo_name)
             self.send("/VMC/Ext/Bone/Pos", vmc_name, 0.0, 0.0, 0.0, *quat)
 
         self.send("/VMC/Ext/OK", 1)
@@ -322,6 +340,7 @@ class LiveLinkFaceSender:
         fps: int,
         subject: str,
         eye_rotation_mode: str,
+        eye_look_scale: float,
         eye_yaw_scale: float,
         eye_pitch_scale: float,
         debug: bool,
@@ -329,6 +348,7 @@ class LiveLinkFaceSender:
         self.dry_run = dry_run
         self.debug = debug
         self.eye_rotation_mode = eye_rotation_mode
+        self.eye_look_scale = eye_look_scale
         self.eye_yaw_scale = eye_yaw_scale
         self.eye_pitch_scale = eye_pitch_scale
         self.packet = LiveLinkFacePacket(subject, fps)
@@ -350,6 +370,7 @@ class LiveLinkFaceSender:
         values = [0.0] * 61
         for index, value in enumerate(values52[:52]):
             values[index] = clamp(value, 0.0, 1.0)
+        self._scale_eye_look_blendshapes(values)
         self._apply_eye_rotations(values, pose_frame)
         self.packet.values = values
         self._send_packet()
@@ -373,6 +394,12 @@ class LiveLinkFaceSender:
             except OSError as exc:
                 if self.debug:
                     print(f"[livelink] send failed: {exc}")
+
+    def _scale_eye_look_blendshapes(self, values61: list[float]) -> None:
+        if self.eye_look_scale == 1.0:
+            return
+        for index in ARKIT_EYE_LOOK_INDICES:
+            values61[index] = clamp(values61[index] * self.eye_look_scale, 0.0, 1.0)
 
     def _apply_eye_rotations(
         self,
