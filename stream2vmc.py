@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Body-only EchoAvatar motion stream to VMC."""
 
 from __future__ import annotations

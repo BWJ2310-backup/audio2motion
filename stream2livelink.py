@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Face-only EchoAvatar blendshape stream to LiveLink Face UDP."""
 
 from __future__ import annotations

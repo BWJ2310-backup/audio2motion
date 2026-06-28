@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Stream microphone or virtual-audio input to the EchoAvatar inference server.
 
