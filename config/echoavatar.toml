@@ -1,0 +1,80 @@
+# EchoAvatar runtime config.
+# Start services with:
+#   python stream2vmc.py
+#   python stream2livelink.py
+#   python audio2motion.py
+
+[audio2motion]
+script = "scripts/streaming_audio2motion_30fps_bp_attn4_encodec2_multirvq_nbc512_withface_ik.py"
+model_name = "./ckpts/body_g_d"
+cuda_visible_devices = "0,1"
+# On a remote GPU host, keep this as 0.0.0.0 so the audio sender can connect.
+listen_host = "0.0.0.0"
+audio_port = 12345
+profile_timing = false
+profile_sync = false
+
+# These are TCP receivers that audio2motion.py connects to after generating
+# motion. If audio2motion.py runs on a remote GPU machine and stream2vmc.py /
+# stream2livelink.py run locally, set these host values to the local machine's
+# VPN/LAN IP as seen from the GPU machine.
+[[motion_outputs]]
+name = "body_vmc"
+enabled = true
+host = "127.0.0.1"
+port = 12346
+
+[[motion_outputs]]
+name = "face_livelink"
+enabled = true
+host = "127.0.0.1"
+port = 12348
+
+[stream2vmc]
+# Use 0.0.0.0 when audio2motion.py runs on another machine.
+listen_host = "0.0.0.0"
+listen_port = 12346
+# Usually this is the InZOI / VMC receiver machine. If stream2vmc.py runs on
+# the same machine as InZOI, 127.0.0.1 is correct.
+target_host = "127.0.0.1"
+target_port = 39539
+source_fps = 60
+body_fps = 60
+stream_fps = 60
+root_scale = 1.0
+root_offset = [0.0, 0.0, 0.0]
+root_rotation_mode = "identity"
+max_packet_bytes = 104857600
+no_pacing = false
+dry_run = false
+debug = false
+
+[stream2livelink]
+# Use 0.0.0.0 when audio2motion.py runs on another machine.
+listen_host = "0.0.0.0"
+listen_port = 12348
+# Usually this is the InZOI / LiveLink receiver machine. If stream2livelink.py
+# runs on the same machine as InZOI, 127.0.0.1 is correct.
+target_host = "127.0.0.1"
+target_port = 11111
+subject = "Python_LiveLinkFace"
+source_fps = 60
+face_fps = 60
+stream_fps = 60
+eye_rotation_mode = "blendshape"
+eye_yaw_scale = 1.0
+eye_pitch_scale = 1.0
+max_packet_bytes = 104857600
+no_pacing = false
+dry_run = false
+debug = false
+
+[audio_sender]
+# If audio2motion.py runs on a remote GPU host, set this to that host's LAN/VPN
+# IP or DNS name.
+server_host = "127.0.0.1"
+server_port = 12345
+device = 2
+channels = 1
+rate = 24000
+chunk = 1000
