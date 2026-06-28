@@ -83,7 +83,7 @@ stream2livelink.py
 ```
 
 For multi-machine deployment, change the `host` fields under
-`[[motion_outputs]]` to the machines running `stream2vmc.py` and
+`[[motion_receivers]]` to the machines running `stream2vmc.py` and
 `stream2livelink.py`, and change each streamer's `target_host` to the final
 receiver machine.
 
@@ -94,7 +94,7 @@ Remote audio2motion hosting:
 - Run `stream2vmc.py` and `stream2livelink.py` on the machine closest to the
   InZOI receiver, usually the local Windows or middleware machine.
 - In `[audio_sender]`, set `server_host` to the GPU machine IP or DNS name.
-- In `[[motion_outputs]]`, set `host` to the machine running each streamer as
+- In `[[motion_receivers]]`, set `host` to the machine running each streamer as
   reachable from the GPU machine.
 - In `[stream2vmc]`, set `target_host` to the InZOI VMC receiver machine.
 - In `[stream2livelink]`, set `target_host` to the InZOI LiveLink receiver
@@ -137,7 +137,7 @@ python audio2motion.py
 
 `audio2motion.py` reads `config/echoavatar.toml`, starts the original
 EchoAvatar inference script, and fans out the neutral generated packet to each
-enabled `[[motion_outputs]]` entry.
+enabled `[[motion_receivers]]` entry.
 
 ### 5. Audio Capture
 

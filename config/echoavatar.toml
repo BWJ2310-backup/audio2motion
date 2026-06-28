@@ -18,13 +18,13 @@ profile_sync = false
 # motion. If audio2motion.py runs on a remote GPU machine and stream2vmc.py /
 # stream2livelink.py run locally, set these host values to the local machine's
 # VPN/LAN IP as seen from the GPU machine.
-[[motion_outputs]]
+[[motion_receivers]]
 name = "body_vmc"
 enabled = true
 host = "127.0.0.1"
 port = 12346
 
-[[motion_outputs]]
+[[motion_receivers]]
 name = "face_livelink"
 enabled = true
 host = "127.0.0.1"

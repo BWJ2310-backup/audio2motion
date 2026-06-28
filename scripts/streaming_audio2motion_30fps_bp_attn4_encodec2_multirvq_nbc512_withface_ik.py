@@ -34,15 +34,15 @@ from refers.encodec.encodec.model import EncodecModel
 import orjson
 
 
-def _parse_motion_outputs(
-    raw_outputs: str | None,
+def _parse_motion_receivers(
+    raw_receivers: str | None,
     default_host: str,
     default_port: int,
 ) -> list[dict[str, object]]:
-    outputs: list[dict[str, object]] = []
-    if raw_outputs:
+    receivers: list[dict[str, object]] = []
+    if raw_receivers:
         try:
-            parsed = json.loads(raw_outputs)
+            parsed = json.loads(raw_receivers)
             if isinstance(parsed, dict):
                 parsed = [parsed]
             if isinstance(parsed, list):
@@ -51,14 +51,14 @@ def _parse_motion_outputs(
                         continue
                     host = str(item.get("host") or default_host)
                     port = int(item.get("port") or default_port)
-                    name = str(item.get("name") or f"motion_output_{index}")
-                    outputs.append({"name": name, "host": host, "port": port})
+                    name = str(item.get("name") or f"motion_receiver_{index}")
+                    receivers.append({"name": name, "host": host, "port": port})
         except Exception as exc:
-            print(f"[motion] failed to parse ECHOAVATAR_MOTION_OUTPUTS: {exc}")
+            print(f"[motion] failed to parse ECHOAVATAR_MOTION_RECEIVERS: {exc}")
 
-    if not outputs:
-        outputs.append({"name": "default", "host": default_host, "port": default_port})
-    return outputs
+    if not receivers:
+        receivers.append({"name": "default", "host": default_host, "port": default_port})
+    return receivers
 
 
 # ==================== Lightweight profiling helpers ====================
@@ -69,8 +69,8 @@ PROFILE_SYNC = os.getenv("PROFILE_SYNC", "0") == "1"
 MOTION_SERVER_HOST = os.getenv("ECHOAVATAR_MOTION_SERVER_HOST", "10.76.5.190")
 PORT = int(os.getenv("ECHOAVATAR_AUDIO_PORT", "12345"))
 MOTION_SERVER_PORT = int(os.getenv("ECHOAVATAR_MOTION_SERVER_PORT", "12346"))
-MOTION_OUTPUTS = _parse_motion_outputs(
-    os.getenv("ECHOAVATAR_MOTION_OUTPUTS"),
+MOTION_RECEIVERS = _parse_motion_receivers(
+    os.getenv("ECHOAVATAR_MOTION_RECEIVERS"),
     MOTION_SERVER_HOST,
     MOTION_SERVER_PORT,
 )
@@ -1601,7 +1601,7 @@ if __name__ == "__main__":
 
     def setup_motion_clients():
         clients = []
-        for endpoint in MOTION_OUTPUTS:
+        for endpoint in MOTION_RECEIVERS:
             client = setup_motion_client(endpoint)
             if client is None:
                 client = {"endpoint": endpoint, "sock": None}

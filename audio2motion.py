@@ -15,24 +15,25 @@ from echoavatar_config import ROOT_DIR, get_bool, get_int, get_str, load_config,
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Start EchoAvatar audio2motion from TOML config.")
     parser.add_argument("--config", default=None, help="Path to EchoAvatar TOML config.")
+    parser.add_argument("--motion-receiver", default=None, help="Override [[motion_receivers]] host.")
     return parser.parse_args()
 
 
-def enabled_motion_outputs(config: dict) -> list[dict[str, object]]:
-    outputs = []
-    for item in config.get("motion_outputs", []):
+def enabled_motion_receivers(config: dict) -> list[dict[str, object]]:
+    receivers = []
+    for item in config.get("motion_receivers", []):
         if not isinstance(item, dict):
             continue
         if not get_bool(item, "enabled", True):
             continue
-        outputs.append(
+        receivers.append(
             {
-                "name": get_str(item, "name", f"output_{len(outputs) + 1}"),
+                "name": get_str(item, "name", f"receiver_{len(receivers) + 1}"),
                 "host": get_str(item, "host", "127.0.0.1"),
                 "port": get_int(item, "port", 12346),
             }
         )
-    return outputs
+    return receivers
 
 
 def main() -> int:
@@ -43,13 +44,15 @@ def main() -> int:
 
     config = load_config(args.config)
     cfg = section(config, "audio2motion")
-    outputs = enabled_motion_outputs(config)
-    if not outputs:
-        raise SystemExit("No enabled [[motion_outputs]] entries found in config.")
+    receivers = enabled_motion_receivers(config)
+    if args.motion_receiver:
+        receivers = [{**receiver, "host": args.motion_receiver} for receiver in receivers]
+    if not receivers:
+        raise SystemExit("No enabled [[motion_receivers]] entries found in config.")
 
     os.environ["ECHOAVATAR_HOST"] = get_str(cfg, "listen_host", "0.0.0.0")
     os.environ["ECHOAVATAR_AUDIO_PORT"] = str(get_int(cfg, "audio_port", 12345))
-    os.environ["ECHOAVATAR_MOTION_OUTPUTS"] = json.dumps(outputs)
+    os.environ["ECHOAVATAR_MOTION_RECEIVERS"] = json.dumps(receivers)
     os.environ["PROFILE_TIMING"] = "1" if get_bool(cfg, "profile_timing", False) else "0"
     os.environ["PROFILE_SYNC"] = "1" if get_bool(cfg, "profile_sync", False) else "0"
 
@@ -57,7 +60,7 @@ def main() -> int:
     if cuda_visible_devices is not None:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(cuda_visible_devices)
 
-    first = outputs[0]
+    first = receivers[0]
     os.environ["ECHOAVATAR_MOTION_SERVER_HOST"] = str(first["host"])
     os.environ["ECHOAVATAR_MOTION_SERVER_PORT"] = str(first["port"])
 
@@ -65,8 +68,8 @@ def main() -> int:
     model_name = get_str(cfg, "model_name", "./ckpts/body_g_d")
 
     print(
-        "[audio2motion] motion outputs: "
-        + ", ".join(f"{item['name']}={item['host']}:{item['port']}" for item in outputs)
+        "[audio2motion] motion receivers: "
+        + ", ".join(f"{item['name']}={item['host']}:{item['port']}" for item in receivers)
     )
     print(f"[audio2motion] audio listen port: {os.environ['ECHOAVATAR_AUDIO_PORT']}")
     print(f"[audio2motion] model: {model_name}")
