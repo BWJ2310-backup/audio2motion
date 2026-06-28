@@ -143,16 +143,16 @@ class VmcSender:
         port: int,
         *,
         dry_run: bool,
-        root_scale: float,
         root_offset: tuple[float, float, float],
+        root_position_mode: str,
         root_rotation_mode: str,
         hips_rotation_mode: str,
         coordinate_mode: str,
         debug: bool,
     ) -> None:
         self.dry_run = dry_run
-        self.root_scale = root_scale
         self.root_offset = root_offset
+        self.root_position_mode = root_position_mode
         self.root_rotation_mode = root_rotation_mode
         self.hips_rotation_mode = hips_rotation_mode
         self.coordinate_mode = coordinate_mode
@@ -160,6 +160,7 @@ class VmcSender:
         self.target = (host, port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sent_frames = 0
+        self.root_anchor: tuple[float, float, float] | None = None
 
     def close(self) -> None:
         self.sock.close()
@@ -184,11 +185,12 @@ class VmcSender:
         root_z = float(trans_frame[2]) if len(trans_frame) > 2 else 0.0
         root_pos = self._convert_position(
             (
-                root_x * self.root_scale,
-                root_y * self.root_scale,
-                root_z * self.root_scale,
+                root_x,
+                root_y,
+                root_z,
             )
         )
+        root_pos = self._apply_root_position_mode(root_pos)
         root_pos = (
             root_pos[0] + self.root_offset[0],
             root_pos[1] + self.root_offset[1],
@@ -238,7 +240,29 @@ class VmcSender:
         x, y, z = pos
         if self.coordinate_mode == "blender_to_vmc":
             return -x, z, -y
+        if self.coordinate_mode == "unity_to_unreal":
+            return z, x, y
         return x, y, z
+
+    def _apply_root_position_mode(
+        self,
+        pos: tuple[float, float, float],
+    ) -> tuple[float, float, float]:
+        if self.root_position_mode == "absolute":
+            return pos
+
+        if self.root_anchor is None:
+            self.root_anchor = pos
+
+        ax, ay, az = self.root_anchor
+        x, y, z = pos
+        if self.root_position_mode == "relative":
+            return x - ax, y - ay, z - az
+        if self.root_position_mode == "relative_horizontal":
+            if self.coordinate_mode == "unity_to_unreal":
+                return x - ax, y - ay, z
+            return x - ax, y, z - az
+        return pos
 
     def _convert_quat(
         self,
@@ -247,6 +271,8 @@ class VmcSender:
         x, y, z, w = quat
         if self.coordinate_mode == "blender_to_vmc":
             return normalize_xyzw((x, -z, y, w))
+        if self.coordinate_mode == "unity_to_unreal":
+            return normalize_xyzw((z, x, y, w))
         return quat
 
 

@@ -53,8 +53,8 @@ def main() -> int:
         get_str(cfg, "target_host", "127.0.0.1"),
         get_int(cfg, "target_port", 39539),
         dry_run=get_bool(cfg, "dry_run", False),
-        root_scale=get_float(cfg, "root_scale", 1.0),
         root_offset=get_float_tuple(cfg, "root_offset", (0.0, 0.0, 0.0)),
+        root_position_mode=get_str(cfg, "root_position_mode", "absolute"),
         root_rotation_mode=get_str(cfg, "root_rotation_mode", "identity"),
         hips_rotation_mode=get_str(cfg, "hips_rotation_mode", "root_bone"),
         coordinate_mode=get_str(cfg, "coordinate_mode", "identity"),
@@ -84,6 +84,7 @@ def main() -> int:
             server.settimeout(0.5)
             print(f"[vmc] listening for EchoAvatar body stream on {listen_host}:{listen_port}")
             print(f"[vmc] output body VMC -> {sender.target[0]}:{sender.target[1]}")
+            print(f"[vmc] root position mode: {sender.root_position_mode}")
             print(f"[vmc] root rotation mode: {sender.root_rotation_mode}")
             print(f"[vmc] hips rotation mode: {sender.hips_rotation_mode}")
             print(f"[vmc] coordinate mode: {sender.coordinate_mode}")
