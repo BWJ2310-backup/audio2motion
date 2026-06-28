@@ -191,6 +191,7 @@ class VmcSender:
         *,
         dry_run: bool,
         root_offset: tuple[float, float, float],
+        root_position_scale: float,
         root_position_mode: str,
         root_rotation_mode: str,
         hips_rotation_mode: str,
@@ -199,6 +200,7 @@ class VmcSender:
     ) -> None:
         self.dry_run = dry_run
         self.root_offset = root_offset
+        self.root_position_scale = root_position_scale
         self.root_position_mode = root_position_mode
         self.root_rotation_mode = root_rotation_mode
         self.hips_rotation_mode = hips_rotation_mode
@@ -211,6 +213,9 @@ class VmcSender:
 
     def close(self) -> None:
         self.sock.close()
+
+    def reset_root_anchor(self) -> None:
+        self.root_anchor = None
 
     def send(self, address: str, *args: object) -> None:
         packet = build_osc_message(address, *args)
@@ -239,9 +244,9 @@ class VmcSender:
         )
         root_pos = self._apply_root_position_mode(root_pos)
         root_pos = (
-            root_pos[0] + self.root_offset[0],
-            root_pos[1] + self.root_offset[1],
-            root_pos[2] + self.root_offset[2],
+            root_pos[0] * self.root_position_scale + self.root_offset[0],
+            root_pos[1] * self.root_position_scale + self.root_offset[1],
+            root_pos[2] * self.root_position_scale + self.root_offset[2],
         )
 
         root_quat = (

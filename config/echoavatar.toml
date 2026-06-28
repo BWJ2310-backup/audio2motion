@@ -42,6 +42,8 @@ source_fps = 60
 body_fps = 60
 stream_fps = 60
 root_offset = [0.0, 0.0, 0.0]
+# EchoAvatar/Unity applies translation / 100f before moving Root_M.
+root_position_scale = 0.01
 # Ground the actor root; EchoAvatar trans carries pelvis height in centimeters.
 root_position_mode = "relative_horizontal"
 root_rotation_mode = "identity"

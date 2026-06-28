@@ -54,6 +54,7 @@ def main() -> int:
         get_int(cfg, "target_port", 39539),
         dry_run=get_bool(cfg, "dry_run", False),
         root_offset=get_float_tuple(cfg, "root_offset", (0.0, 0.0, 0.0)),
+        root_position_scale=get_float(cfg, "root_position_scale", 0.01),
         root_position_mode=get_str(cfg, "root_position_mode", "absolute"),
         root_rotation_mode=get_str(cfg, "root_rotation_mode", "identity"),
         hips_rotation_mode=get_str(cfg, "hips_rotation_mode", "root_bone"),
@@ -85,6 +86,7 @@ def main() -> int:
             print(f"[vmc] listening for EchoAvatar body stream on {listen_host}:{listen_port}")
             print(f"[vmc] output body VMC -> {sender.target[0]}:{sender.target[1]}")
             print(f"[vmc] root position mode: {sender.root_position_mode}")
+            print(f"[vmc] root position scale: {sender.root_position_scale}")
             print(f"[vmc] root rotation mode: {sender.root_rotation_mode}")
             print(f"[vmc] hips rotation mode: {sender.hips_rotation_mode}")
             print(f"[vmc] coordinate mode: {sender.coordinate_mode}")
@@ -95,6 +97,7 @@ def main() -> int:
                 except socket.timeout:
                     continue
                 print(f"[vmc] EchoAvatar connected from {address[0]}:{address[1]}")
+                sender.reset_root_anchor()
                 with client:
                     client.settimeout(0.5)
                     while running:
