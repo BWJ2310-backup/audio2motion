@@ -238,7 +238,7 @@ class VmcSender:
         pos: tuple[float, float, float],
     ) -> tuple[float, float, float]:
         x, y, z = pos
-        if self.coordinate_mode == "echoavatar_to_vmc":
+        if self.coordinate_mode in ("echoavatar_to_vmc", "echoavatar_raw"):
             return -x, y, z
         if self.coordinate_mode == "blender_to_vmc":
             return -x, z, -y
@@ -261,7 +261,7 @@ class VmcSender:
         if self.root_position_mode == "relative":
             return x - ax, y - ay, z - az
         if self.root_position_mode == "relative_horizontal":
-            if self.coordinate_mode == "echoavatar_to_vmc":
+            if self.coordinate_mode in ("echoavatar_to_vmc", "echoavatar_raw"):
                 return x - ax, 0.0, z - az
             if self.coordinate_mode == "unity_to_unreal":
                 return x - ax, y - ay, z
@@ -273,6 +273,8 @@ class VmcSender:
         quat: tuple[float, float, float, float],
     ) -> tuple[float, float, float, float]:
         x, y, z, w = quat
+        if self.coordinate_mode == "echoavatar_raw":
+            return quat
         if self.coordinate_mode in ("echoavatar_to_vmc", "blender_to_vmc"):
             return normalize_xyzw((x, -z, y, w))
         if self.coordinate_mode == "unity_to_unreal":
