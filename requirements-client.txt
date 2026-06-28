@@ -1,0 +1,4 @@
+keyboard
+numpy
+sounddevice==0.5.5
+tomli; python_version < "3.11"
