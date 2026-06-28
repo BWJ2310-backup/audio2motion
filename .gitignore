@@ -29,3 +29,4 @@ outputs/
 # Agent
 .agents
 .claude
+exports/*

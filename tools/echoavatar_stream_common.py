@@ -10,6 +10,7 @@ import socket
 import struct
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Iterable, Sequence
 
 
@@ -34,62 +35,65 @@ HipPart1_L Knee_L KneePart1_L Ankle_L Toes_L ToesEnd_L Heel_L HeelEnd_L
 BONE_INDEX = {name: index for index, name in enumerate(ECHOAVATAR_BONES)}
 
 
+_VMC_REFERENCE_BASIS_QUATS: dict[str, tuple[float, float, float, float]] | None = None
+
+
 # VMC body output uses VRM humanoid bone names. Face data is intentionally not
 # sent through VMC; ARKit face coefficients belong to LiveLink.
 VMC_TO_ECHO_BONE = {
-    "Hips": "Root_M",
-    "Spine": "Spine1_M",
-    "Chest": "Chest_M",
-    "UpperChest": "Chest_M",
-    "ChestUpper": "Chest_M",
-    "Neck": "Neck_M",
-    "Head": "Head_M",
-    "RightShoulder": "Scapula_R",
-    "RightUpperArm": "Shoulder_R",
-    "RightLowerArm": "Elbow_R",
-    "RightHand": "Wrist_R",
-    "LeftShoulder": "Scapula_L",
-    "LeftUpperArm": "Shoulder_L",
-    "LeftLowerArm": "Elbow_L",
-    "LeftHand": "Wrist_L",
-    "RightUpperLeg": "Hip_R",
-    "RightLowerLeg": "Knee_R",
-    "RightFoot": "Ankle_R",
-    "RightToes": "Toes_R",
-    "LeftUpperLeg": "Hip_L",
-    "LeftLowerLeg": "Knee_L",
-    "LeftFoot": "Ankle_L",
-    "LeftToes": "Toes_L",
-    "RightThumbProximal": "ThumbFinger1_R",
-    "RightThumbIntermediate": "ThumbFinger2_R",
-    "RightThumbDistal": "ThumbFinger3_R",
-    "RightIndexProximal": "IndexFinger1_R",
-    "RightIndexIntermediate": "IndexFinger2_R",
-    "RightIndexDistal": "IndexFinger3_R",
-    "RightMiddleProximal": "MiddleFinger1_R",
-    "RightMiddleIntermediate": "MiddleFinger2_R",
-    "RightMiddleDistal": "MiddleFinger3_R",
-    "RightRingProximal": "RingFinger1_R",
-    "RightRingIntermediate": "RingFinger2_R",
-    "RightRingDistal": "RingFinger3_R",
-    "RightLittleProximal": "PinkyFinger1_R",
-    "RightLittleIntermediate": "PinkyFinger2_R",
-    "RightLittleDistal": "PinkyFinger3_R",
-    "LeftThumbProximal": "ThumbFinger1_L",
-    "LeftThumbIntermediate": "ThumbFinger2_L",
-    "LeftThumbDistal": "ThumbFinger3_L",
-    "LeftIndexProximal": "IndexFinger1_L",
-    "LeftIndexIntermediate": "IndexFinger2_L",
-    "LeftIndexDistal": "IndexFinger3_L",
-    "LeftMiddleProximal": "MiddleFinger1_L",
-    "LeftMiddleIntermediate": "MiddleFinger2_L",
-    "LeftMiddleDistal": "MiddleFinger3_L",
-    "LeftRingProximal": "RingFinger1_L",
-    "LeftRingIntermediate": "RingFinger2_L",
-    "LeftRingDistal": "RingFinger3_L",
-    "LeftLittleProximal": "PinkyFinger1_L",
-    "LeftLittleIntermediate": "PinkyFinger2_L",
-    "LeftLittleDistal": "PinkyFinger3_L",
+    "Hips": ("Root_M",),
+    "Spine": ("Spine1_M",),
+    "Chest": ("Spine1Part1_M",),
+    "UpperChest": ("Chest_M",),
+    "ChestUpper": ("Chest_M",),
+    "Neck": ("Neck_M", "NeckPart1_M"),
+    "Head": ("Head_M",),
+    "RightShoulder": ("Scapula_R",),
+    "RightUpperArm": ("Shoulder_R", "ShoulderPart1_R"),
+    "RightLowerArm": ("Elbow_R", "ElbowPart1_R"),
+    "RightHand": ("Wrist_R",),
+    "LeftShoulder": ("Scapula_L",),
+    "LeftUpperArm": ("Shoulder_L", "ShoulderPart1_L"),
+    "LeftLowerArm": ("Elbow_L", "ElbowPart1_L"),
+    "LeftHand": ("Wrist_L",),
+    "RightUpperLeg": ("Hip_R", "HipPart1_R"),
+    "RightLowerLeg": ("Knee_R", "KneePart1_R"),
+    "RightFoot": ("Ankle_R",),
+    "RightToes": ("Toes_R",),
+    "LeftUpperLeg": ("Hip_L", "HipPart1_L"),
+    "LeftLowerLeg": ("Knee_L", "KneePart1_L"),
+    "LeftFoot": ("Ankle_L",),
+    "LeftToes": ("Toes_L",),
+    "RightThumbProximal": ("ThumbFinger1_R",),
+    "RightThumbIntermediate": ("ThumbFinger2_R",),
+    "RightThumbDistal": ("ThumbFinger3_R",),
+    "RightIndexProximal": ("IndexFinger1_R",),
+    "RightIndexIntermediate": ("IndexFinger2_R",),
+    "RightIndexDistal": ("IndexFinger3_R",),
+    "RightMiddleProximal": ("MiddleFinger1_R",),
+    "RightMiddleIntermediate": ("MiddleFinger2_R",),
+    "RightMiddleDistal": ("MiddleFinger3_R",),
+    "RightRingProximal": ("RingFinger1_R",),
+    "RightRingIntermediate": ("RingFinger2_R",),
+    "RightRingDistal": ("RingFinger3_R",),
+    "RightLittleProximal": ("PinkyFinger1_R",),
+    "RightLittleIntermediate": ("PinkyFinger2_R",),
+    "RightLittleDistal": ("PinkyFinger3_R",),
+    "LeftThumbProximal": ("ThumbFinger1_L",),
+    "LeftThumbIntermediate": ("ThumbFinger2_L",),
+    "LeftThumbDistal": ("ThumbFinger3_L",),
+    "LeftIndexProximal": ("IndexFinger1_L",),
+    "LeftIndexIntermediate": ("IndexFinger2_L",),
+    "LeftIndexDistal": ("IndexFinger3_L",),
+    "LeftMiddleProximal": ("MiddleFinger1_L",),
+    "LeftMiddleIntermediate": ("MiddleFinger2_L",),
+    "LeftMiddleDistal": ("MiddleFinger3_L",),
+    "LeftRingProximal": ("RingFinger1_L",),
+    "LeftRingIntermediate": ("RingFinger2_L",),
+    "LeftRingDistal": ("RingFinger3_L",),
+    "LeftLittleProximal": ("PinkyFinger1_L",),
+    "LeftLittleIntermediate": ("PinkyFinger2_L",),
+    "LeftLittleDistal": ("PinkyFinger3_L",),
 }
 
 
@@ -109,6 +113,49 @@ def normalize_xyzw(quat: Sequence[float]) -> tuple[float, float, float, float]:
     if norm <= 1e-8:
         return 0.0, 0.0, 0.0, 1.0
     return x / norm, y / norm, z / norm, w / norm
+
+
+def multiply_xyzw(
+    left: tuple[float, float, float, float],
+    right: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+    lx, ly, lz, lw = left
+    rx, ry, rz, rw = right
+    return normalize_xyzw(
+        (
+            lw * rx + lx * rw + ly * rz - lz * ry,
+            lw * ry - lx * rz + ly * rw + lz * rx,
+            lw * rz + lx * ry - ly * rx + lz * rw,
+            lw * rw - lx * rx - ly * ry - lz * rz,
+        )
+    )
+
+
+def invert_unit_xyzw(
+    quat: tuple[float, float, float, float],
+) -> tuple[float, float, float, float]:
+    x, y, z, w = normalize_xyzw(quat)
+    return -x, -y, -z, w
+
+
+def get_vmc_reference_basis_quats() -> dict[str, tuple[float, float, float, float]]:
+    global _VMC_REFERENCE_BASIS_QUATS
+    if _VMC_REFERENCE_BASIS_QUATS is not None:
+        return _VMC_REFERENCE_BASIS_QUATS
+
+    root_dir = Path(__file__).resolve().parents[1]
+    basis_path = root_dir / "stats" / "blender2inzoi_vmc_rest_basis.json"
+    try:
+        data = json.loads(basis_path.read_text())
+        basis = data.get("basis", {})
+        _VMC_REFERENCE_BASIS_QUATS = {
+            str(name): normalize_xyzw(entry["quat_xyzw"])
+            for name, entry in basis.items()
+            if "quat_xyzw" in entry
+        }
+    except Exception:
+        _VMC_REFERENCE_BASIS_QUATS = {}
+    return _VMC_REFERENCE_BASIS_QUATS
 
 
 def build_osc_message(address: str, *args: object) -> bytes:
@@ -204,13 +251,13 @@ class VmcSender:
         )
         self.send("/VMC/Ext/Root/Pos", "root", *root_pos, *root_quat)
 
-        for vmc_name, echo_name in VMC_TO_ECHO_BONE.items():
+        for vmc_name, echo_names in VMC_TO_ECHO_BONE.items():
             if vmc_name == "Hips" and self.hips_rotation_mode == "identity":
                 quat = (0.0, 0.0, 0.0, 1.0)
             elif vmc_name == "Hips" and self.hips_rotation_mode == "skip":
                 continue
             else:
-                quat = self._bone_quat(pose_frame, echo_name)
+                quat = self._bone_quat(pose_frame, echo_names, vmc_name)
             self.send("/VMC/Ext/Bone/Pos", vmc_name, 0.0, 0.0, 0.0, *quat)
 
         self.send("/VMC/Ext/OK", 1)
@@ -226,12 +273,21 @@ class VmcSender:
     def _bone_quat(
         self,
         pose_frame: Sequence[Sequence[float]],
-        echo_name: str,
+        echo_names: str | Sequence[str],
+        vmc_name: str | None = None,
     ) -> tuple[float, float, float, float]:
-        index = BONE_INDEX.get(echo_name)
-        if index is None or index >= len(pose_frame):
+        names = (echo_names,) if isinstance(echo_names, str) else tuple(echo_names)
+        quat = (0.0, 0.0, 0.0, 1.0)
+        found = False
+        for echo_name in names:
+            index = BONE_INDEX.get(echo_name)
+            if index is None or index >= len(pose_frame):
+                continue
+            quat = multiply_xyzw(quat, normalize_xyzw(pose_frame[index]))
+            found = True
+        if not found:
             return 0.0, 0.0, 0.0, 1.0
-        return self._convert_quat(normalize_xyzw(pose_frame[index]))
+        return self._convert_quat(quat, vmc_name)
 
     def _convert_position(
         self,
@@ -271,11 +327,18 @@ class VmcSender:
     def _convert_quat(
         self,
         quat: tuple[float, float, float, float],
+        vmc_name: str | None = None,
     ) -> tuple[float, float, float, float]:
         x, y, z, w = quat
         if self.coordinate_mode == "echoavatar_raw":
             return quat
-        if self.coordinate_mode in ("echoavatar_to_vmc", "blender_to_vmc"):
+        if self.coordinate_mode == "echoavatar_to_vmc":
+            basis = get_vmc_reference_basis_quats().get(vmc_name or "")
+            if basis is not None:
+                quat = multiply_xyzw(multiply_xyzw(basis, quat), invert_unit_xyzw(basis))
+                x, y, z, w = quat
+            return normalize_xyzw((x, -z, y, w))
+        if self.coordinate_mode == "blender_to_vmc":
             return normalize_xyzw((x, -z, y, w))
         if self.coordinate_mode == "unity_to_unreal":
             return normalize_xyzw((z, x, y, w))

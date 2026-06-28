@@ -46,9 +46,9 @@ root_offset = [0.0, 0.0, 0.0]
 root_position_mode = "relative_horizontal"
 root_rotation_mode = "identity"
 hips_rotation_mode = "root_bone"
-# EchoAvatar already swaps root translation to Y-up. This grounds the actor root
-# and passes the model host's already-converted stream quaternions through.
-coordinate_mode = "echoavatar_raw"
+# EchoAvatar stream quaternions are mapped onto the blender2inzoi.fbx reference
+# rig basis, then converted into VMC/Unity axes like the original UPBGE sender.
+coordinate_mode = "echoavatar_to_vmc"
 max_packet_bytes = 104857600
 no_pacing = false
 dry_run = false
